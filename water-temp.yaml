@@ -1,0 +1,59 @@
+esphome:
+  name: zal1-water-temp
+  friendly_name: "Зал 1 температура воды"
+
+esp8266:
+  board: d1_mini
+
+# Логирование для отладки
+logger:
+  level: DEBUG
+
+# API для Home Assistant
+api:
+  encryption:
+    key: !secret api_encryption_key
+
+# OTA обновления
+ota:
+  - platform: esphome
+    password: "60bac32a0e78fa176b467733dbb17a8f"
+
+# Wi-Fi
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+  min_auth_mode: WPA2
+
+# Шина 1-Wire
+one_wire:
+  platform: gpio
+  pin: D4
+
+# Датчики
+sensor:
+  # Температура
+  - platform: dallas_temp
+    address: 0xb93cb5f649003728
+    id: temp_bas1
+    name: "Температура воды - бассейн 1"
+    unit_of_measurement: "°C"
+    accuracy_decimals: 1
+    filters:
+#      - offset: 20.5
+      - calibrate_linear:
+        - 0.0 -> 0.0
+        - 100.0 -> 100.0
+
+    
+  # Диагностика Wi-Fi
+  - platform: wifi_signal
+    name: "Уровень Wi-Fi сигнала"
+    update_interval: 60s
+    entity_category: diagnostic
+
+binary_sensor:
+  # Статус устройства
+  - platform: status
+    name: "Статус контроллера воды"
+    entity_category: diagnostic

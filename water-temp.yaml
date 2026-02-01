@@ -28,7 +28,7 @@ wifi:
 # Шина 1-Wire
 one_wire:
   platform: gpio
-  pin: D4
+  pin: D6
 
 # Датчики
 sensor:
@@ -39,11 +39,11 @@ sensor:
     name: "Температура воды - бассейн 1"
     unit_of_measurement: "°C"
     accuracy_decimals: 1
-    filters:
+#    filters:
 #      - offset: 20.5
-      - calibrate_linear:
-        - 0.0 -> 0.0
-        - 100.0 -> 100.0
+#      - calibrate_linear:
+#        - 0.0 -> 0.0
+#        - 100.0 -> 100.0
 
     
   # Диагностика Wi-Fi

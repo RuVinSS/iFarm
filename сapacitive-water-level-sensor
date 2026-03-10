@@ -1,0 +1,69 @@
+esphome:
+  name: capacitive-water-level-sensor
+  friendly_name: Зал 1 наличие воды
+
+esp8266:
+  board: d1_mini
+
+# Enable logging
+logger:
+#  level: ERROR
+  level: DEBUG
+
+# Enable Home Assistant API
+api:
+  encryption:
+    key: !secret api_encryption_key
+
+ota:
+  - platform: esphome
+    password: "укажите свой пароль"
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+  min_auth_mode: WPA2
+
+# Бинарный сенсор для датчика уровня
+binary_sensor:
+  - platform: gpio
+    pin:
+      number: D5
+      mode: INPUT_PULLUP
+      inverted: true  # Инвертируем сигнал
+    name: "Уровень воды - бассейн 1"
+    id: water_level_basin_1
+    device_class: moisture
+    filters:
+      - delayed_on: 100ms      # Антидребезг при появлении воды
+      - delayed_off: 100ms     # Антидребезг при исчезновении
+    on_state:
+      then:
+        - lambda: |-
+            if (id(water_level_basin_1).state) {
+              ESP_LOGD("water", "Вода обнаружена!");
+            } else {
+              ESP_LOGD("water", "Вода отсутствует");
+            }
+  
+  - platform: status
+    name: "Статус - датчик уровня"
+    id: device_status
+    entity_category: diagnostic
+
+# Сенсоры для диагностики
+sensor:
+  - platform: wifi_signal
+    name: "WiFi сигнал - уровень воды"
+    update_interval: 60s
+    entity_category: diagnostic
+
+  - platform: uptime
+    name: "Аптайм - уровень воды"
+    entity_category: diagnostic
+
+# Кнопка перезагрузки
+button:
+  - platform: restart
+    name: "Перезагрузить датчик уровня"
+    entity_category: diagnostic

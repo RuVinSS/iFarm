@@ -10,7 +10,7 @@ logger:
   baud_rate: 0
   hardware_uart: UART0  # явно указываем, что используем UART0, но с baud_rate 0
   level: DEBUG  # логи будут выводиться через другие каналы (WiFi, USB)
- # level: WARN  # логи будут выводиться через другие каналы (WiFi, USB)
+ # level: WARN  # после тестирования, комментируем строчку выше и раскомментируем эту
 
 # Enable Home Assistant API
 api:

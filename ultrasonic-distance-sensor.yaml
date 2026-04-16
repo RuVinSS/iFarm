@@ -1,5 +1,5 @@
 esphome:
-  name: ultrasonic-distance-sensor
+  name: sonic
   friendly_name: "Ультразвуковой датчик расстояния"
 
 esp8266:

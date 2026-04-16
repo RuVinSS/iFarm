@@ -1,0 +1,69 @@
+esphome:
+  name: ultrasonic-distance-sensor
+  friendly_name: "Ультразвуковой датчик расстояния"
+
+esp8266:
+  board: d1_mini
+
+# Enable logging
+logger:
+  baud_rate: 0
+  hardware_uart: UART0  # явно указываем, что используем UART0, но с baud_rate 0
+  level: DEBUG  # логи будут выводиться через другие каналы (WiFi, USB)
+
+# Enable Home Assistant API
+api:
+  encryption:
+    key:  !secret api_encryption_key
+
+ota:
+  - platform: esphome
+    password: "укажите свой пароль"
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+  min_auth_mode: WPA2
+
+uart:
+  id: uart_ultrasonic
+  tx_pin: GPIO1  # Пин, соединенный с RX датчика (опционально)
+  rx_pin: GPIO3  # Пин, соединенный с TX датчика
+  baud_rate: 9600
+  stop_bits: 1
+
+# Создаём сенсор для обработки данных
+sensor:
+  - platform: jsn_sr04t   # ESPHome также поддерживает AJ_SR04M через эту платформу
+    model: aj_sr04m       # Указываем модель датчика [citation:2]
+    name: "Расстояние до воды"
+    unit_of_measurement: "м"
+    accuracy_decimals: 2
+    update_interval: 5s   # Запрашиваем данные каждые 5 секунд
+    uart_id: uart_ultrasonic
+    filters:
+          # МЕДИАННЫЙ ФИЛЬТР - удаляет случайные выбросы (например, от капель или помех)
+          # Принцип: накапливает N измерений, сортирует их, берёт среднее значение      
+      - median:
+          window_size: 10    # Размер окна: сколько измерений накопить для расчёта (5 шт. × 5с = 25 секунд данных)
+          send_every: 5     # Отправлять результат каждые 5 измерений (то есть каждые 25 секунд)
+                            # Пример: было [1.20, 1.21, 5.80, 1.19, 1.20] → после сортировки [1.19,1.20,1.20,1.21,5.80] → медиана = 1.20 (выброс 5.80 отброшен)
+          # ФИЛЬТР ОГРАНИЧЕНИЯ ЧАСТОТЫ - не отправляет значения слишком часто
+          # Даже если медиана выдаёт результат каждую секунду, throttle ограничит отправку
+      - throttle: 10s       # Отправлять в Home Assistant не чаще чем 1 раз в 10 секунд
+                            # (при текущих настройках медиана выдаёт результат раз в 25с, поэтому throttle не блокирует отправку)
+
+# Диагностика
+  - platform: wifi_signal
+    name: "WiFi сигнал"
+    update_interval: 60s
+    entity_category: diagnostic
+
+  - platform: uptime
+    name: "Аптайм"
+    entity_category: diagnostic
+
+binary_sensor:
+  - platform: status
+    name: "Статус устройства"
+    entity_category: diagnostic

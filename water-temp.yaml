@@ -17,7 +17,7 @@ api:
 # OTA обновления
 ota:
   - platform: esphome
-    password: "60bac32a0e78fa176b467733dbb17a8f"
+    password: "укажите свой пароль"
 
 # Wi-Fi
 wifi:

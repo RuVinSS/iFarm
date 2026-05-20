@@ -33,6 +33,22 @@ uart:
   baud_rate: 9600
   stop_bits: 1
 
+# Глобальная переменная для счётчика
+globals:
+  - id: last_raw_value
+    type: float
+    restore_value: false
+    initial_value: '-1.0'
+  - id: last_change_timestamp
+    type: int
+    restore_value: false
+    initial_value: '0' 
+
+# Получаем время от Home Assistant
+time:
+  - platform: homeassistant
+    id: ha_time
+
 # Создаём сенсор для обработки данных
 sensor:
   - platform: jsn_sr04t   # ESPHome также поддерживает AJ_SR04M через эту платформу
@@ -53,7 +69,66 @@ sensor:
           # Даже если медиана выдаёт результат каждую секунду, throttle ограничит отправку
       - throttle: 10s       # Отправлять в Home Assistant не чаще чем 1 раз в 10 секунд
                             # (при текущих настройках медиана выдаёт результат раз в 25с, поэтому throttle не блокирует отправку)
+    on_value:
+      then:
+        # Проверяем, изменилось ли значение
+        - if:
+            condition:
+              lambda: |-
+                float current = id(raw_distance).state;
+                float last = id(last_raw_value);
+                // При первом запуске last = -1.0
+                if (last < 0) return false;
+                return abs(current - last) > 0.001;
+            then:
+              # Обновляем timestamp ТОЛЬКО при изменении
+              - globals.set:
+                  id: last_change_timestamp
+                  value: !lambda 'return id(ha_time).now().timestamp;'
+              
+              # Обновляем сенсор с временем изменения
+              - sensor.template.publish:
+                  id: last_change_time_sensor
+                  state: !lambda 'return id(last_change_timestamp);'
+        
+        # Сохраняем текущее значение для следующего сравнения (ВСЕГДА)
+        - globals.set:
+            id: last_raw_value
+            value: !lambda 'return id(raw_distance).state;'
 
+  # Сенсор для отображения времени последнего изменения (Unix timestamp)
+  - platform: template
+    name: "Время последнего изменения (timestamp)"
+    id: last_change_time_sensor
+    lambda: |-
+      return id(last_change_timestamp);
+    update_interval: never
+    entity_category: diagnostic
+    unit_of_measurement: "сек"
+    icon: "mdi:clock"
+    accuracy_decimals: 0
+    filters:
+      - throttle: 20s
+
+  # Дополнительно: сколько времени прошло с последнего изменения
+  - platform: template
+    name: "Секунд с последнего изменения"
+    id: seconds_since_last_change
+    lambda: |-
+      if (id(last_change_timestamp) > 0) {
+        time_t now = id(ha_time).now().timestamp;
+        return (now - id(last_change_timestamp));
+      } else {
+        return -1.0;
+      }
+    update_interval: 5s
+    entity_category: diagnostic
+    unit_of_measurement: "с"
+    accuracy_decimals: 0
+    icon: "mdi:timer"
+    filters:
+      - throttle: 20s  
+            
 # Диагностика
   - platform: wifi_signal
     name: "WiFi сигнал"
